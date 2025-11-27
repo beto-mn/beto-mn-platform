@@ -10,22 +10,6 @@ locals {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS'"
   }
-
-  # Methods configuration
-  http_methods = {
-    post = {
-      http_method      = "POST"
-      authorization    = "NONE"
-      api_key_required = true
-      integration_type = "MOCK"
-    }
-    options = {
-      http_method      = "OPTIONS"
-      authorization    = "NONE"
-      api_key_required = false
-      integration_type = "MOCK"
-    }
-  }
 }
 
 # REST API
@@ -45,55 +29,73 @@ resource "aws_api_gateway_resource" "contact" {
   path_part   = "contact"
 }
 
-# Methods (POST and OPTIONS)
-resource "aws_api_gateway_method" "contact" {
-  for_each = local.http_methods
-
+# POST method
+resource "aws_api_gateway_method" "contact_post" {
   rest_api_id      = aws_api_gateway_rest_api.contact_api.id
   resource_id      = aws_api_gateway_resource.contact.id
-  http_method      = each.value.http_method
-  authorization    = each.value.authorization
-  api_key_required = each.value.api_key_required
+  http_method      = "POST"
+  authorization    = "NONE"
+  api_key_required = true
 }
 
-# Integrations
-resource "aws_api_gateway_integration" "contact" {
-  for_each = local.http_methods
+# OPTIONS method (CORS preflight)
+resource "aws_api_gateway_method" "contact_options" {
+  rest_api_id      = aws_api_gateway_rest_api.contact_api.id
+  resource_id      = aws_api_gateway_resource.contact.id
+  http_method      = "OPTIONS"
+  authorization    = "NONE"
+  api_key_required = false
+}
 
+# POST integration (Lambda proxy)
+resource "aws_api_gateway_integration" "contact_post" {
+  rest_api_id             = aws_api_gateway_rest_api.contact_api.id
+  resource_id             = aws_api_gateway_resource.contact.id
+  http_method             = aws_api_gateway_method.contact_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_invoke_arn
+}
+
+# OPTIONS integration (MOCK for CORS)
+resource "aws_api_gateway_integration" "contact_options" {
   rest_api_id = aws_api_gateway_rest_api.contact_api.id
   resource_id = aws_api_gateway_resource.contact.id
-  http_method = aws_api_gateway_method.contact[each.key].http_method
-  type        = each.value.integration_type
+  http_method = aws_api_gateway_method.contact_options.http_method
+  type        = "MOCK"
 
   request_templates = {
-    "application/json" = jsonencode({
-      statusCode = 200
-    })
+    "application/json" = jsonencode({ statusCode = 200 })
   }
 }
 
-# Method responses
-resource "aws_api_gateway_method_response" "contact_200" {
-  for_each = local.http_methods
-
+# OPTIONS method response (CORS headers)
+resource "aws_api_gateway_method_response" "contact_options_200" {
   rest_api_id         = aws_api_gateway_rest_api.contact_api.id
   resource_id         = aws_api_gateway_resource.contact.id
-  http_method         = aws_api_gateway_method.contact[each.key].http_method
+  http_method         = aws_api_gateway_method.contact_options.http_method
   status_code         = "200"
   response_parameters = local.cors_headers
 }
 
-# Integration responses
-resource "aws_api_gateway_integration_response" "contact" {
-  for_each = local.http_methods
-
+# OPTIONS integration response (CORS values)
+resource "aws_api_gateway_integration_response" "contact_options" {
   rest_api_id         = aws_api_gateway_rest_api.contact_api.id
   resource_id         = aws_api_gateway_resource.contact.id
-  http_method         = aws_api_gateway_method.contact[each.key].http_method
-  status_code         = aws_api_gateway_method_response.contact_200[each.key].status_code
+  http_method         = aws_api_gateway_method.contact_options.http_method
+  status_code         = aws_api_gateway_method_response.contact_options_200.status_code
   response_parameters = local.cors_values
 
-  depends_on = [aws_api_gateway_integration.contact]
+  depends_on = [aws_api_gateway_integration.contact_options]
+}
+
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.lambda_function_arn
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.contact_api.execution_arn}/*/*"
 }
 
 # Deployment
@@ -103,8 +105,10 @@ resource "aws_api_gateway_deployment" "contact_api" {
   triggers = {
     redeployment = sha1(jsonencode([
       aws_api_gateway_resource.contact.id,
-      [for method in aws_api_gateway_method.contact : method.id],
-      [for integration in aws_api_gateway_integration.contact : integration.id],
+      aws_api_gateway_method.contact_post.id,
+      aws_api_gateway_method.contact_options.id,
+      aws_api_gateway_integration.contact_post.id,
+      aws_api_gateway_integration.contact_options.id,
     ]))
   }
 
@@ -113,7 +117,8 @@ resource "aws_api_gateway_deployment" "contact_api" {
   }
 
   depends_on = [
-    aws_api_gateway_integration.contact
+    aws_api_gateway_integration.contact_post,
+    aws_api_gateway_integration.contact_options,
   ]
 }
 

@@ -1,20 +1,17 @@
 {
   "name": "beto-mn-platform-function",
   "version": "1.0.0",
-  "description": "serverless.ts",
+  "description": "AWS Lambda contact form handler",
   "main": "index.js",
   "scripts": {
+    "build": "tsc && cp -r node_modules dist/",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,json,md}\"",
     "type-check": "tsc --noEmit"
   },
-  "keywords": [
-    "serverless",
-    "typescript",
-    "aws-lambda"
-  ],
+  "keywords": [],
   "author": "Roberto Miron Najera <ing.betonajera@gmail.com>",
   "license": "MIT",
   "packageManager": "pnpm@10.19.0",
@@ -24,7 +21,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
-    "@serverless/typescript": "^4.27.1",
     "@types/aws-lambda": "^8.10.159",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.50.1",
@@ -33,9 +29,6 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.7.4",
-    "serverless": "^4.29.0",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.1"
   }

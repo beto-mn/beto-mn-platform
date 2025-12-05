@@ -24,8 +24,8 @@ output "website_endpoint" {
 }
 
 output "website_domain" {
-  description = "The website domain"
-  value       = var.enable_website_hosting ? aws_s3_bucket_website_configuration.main[0].website_domain : null
+  description = "The website domain (full endpoint for Route53 ALIAS)"
+  value       = var.enable_website_hosting ? aws_s3_bucket_website_configuration.main[0].website_endpoint : null
 }
 
 output "website_hosted_zone_id" {

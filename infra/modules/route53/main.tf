@@ -7,16 +7,16 @@ resource "aws_route53_zone" "main" {
   }
 }
 
-# A record pointing to S3 website endpoint
+# A record pointing to CloudFront or S3 website endpoint
 resource "aws_route53_record" "website" {
   zone_id = aws_route53_zone.main.zone_id
   name    = var.create_www_subdomain ? "www.${var.domain_name}" : var.domain_name
   type    = "A"
 
   alias {
-    name                   = var.s3_website_domain
-    zone_id                = var.s3_hosted_zone_id
-    evaluate_target_health = true
+    name                   = var.use_cloudfront ? var.cloudfront_domain_name : var.s3_website_domain
+    zone_id                = var.use_cloudfront ? var.cloudfront_hosted_zone_id : var.s3_hosted_zone_id
+    evaluate_target_health = false
   }
 }
 
@@ -28,8 +28,8 @@ resource "aws_route53_record" "root" {
   type    = "A"
 
   alias {
-    name                   = var.s3_website_domain
-    zone_id                = var.s3_hosted_zone_id
+    name                   = var.use_cloudfront ? var.cloudfront_domain_name : var.s3_website_domain
+    zone_id                = var.use_cloudfront ? var.cloudfront_hosted_zone_id : var.s3_hosted_zone_id
     evaluate_target_health = false
   }
 }

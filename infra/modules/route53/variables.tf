@@ -3,14 +3,34 @@ variable "domain_name" {
   type        = string
 }
 
+variable "use_cloudfront" {
+  description = "Use CloudFront instead of direct S3 website endpoint"
+  type        = bool
+  default     = false
+}
+
+variable "cloudfront_domain_name" {
+  description = "CloudFront distribution domain name"
+  type        = string
+  default     = ""
+}
+
+variable "cloudfront_hosted_zone_id" {
+  description = "CloudFront hosted zone ID (Z2FDTNDATAQYW2)"
+  type        = string
+  default     = ""
+}
+
 variable "s3_website_domain" {
   description = "The S3 website endpoint domain"
   type        = string
+  default     = ""
 }
 
 variable "s3_hosted_zone_id" {
   description = "The S3 hosted zone ID for the region"
   type        = string
+  default     = ""
 }
 
 variable "create_www_subdomain" {

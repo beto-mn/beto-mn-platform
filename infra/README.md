@@ -1,99 +1,140 @@
-# Terraform Infrastructure - Beto Najera Contact API
+# Terraform Infrastructure - Beto Najera Portfolio
 
-This directory contains the complete Infrastructure as Code (IaC) for a personal portfolio website with contact form API, hosted on AWS.
+This directory contains the complete Infrastructure as Code (IaC) for a personal portfolio website with contact form API, hosted on AWS using CloudFront CDN.
 
 ## 🏗️ Architecture Overview
 
-This Terraform configuration creates a complete serverless architecture for hosting a static website (Nuxt.js) with a contact form API:
+This Terraform configuration creates a complete serverless architecture for hosting a static website (Nuxt.js) with CloudFront CDN and a contact form API:
 
-- **Static Website Hosting** via S3 with custom domain
-- **DNS Management** via Route53 with hosted zone
-- **SSL Certificates** via ACM with automatic DNS validation
-- **REST API** via API Gateway with API Key authentication, CORS, and rate limiting
+- **CloudFront CDN** - Global content delivery with HTTPS
+- **Static Website Hosting** - S3 bucket with website configuration
+- **DNS Management** - Route53 with custom domain
+- **SSL Certificates** - ACM certificates (CloudFront + API)
+- **REST API** - API Gateway with authentication and rate limiting
 
 ```mermaid
 graph TB
     subgraph "Users"
-        Browser[Web Browser]
+        Browser[🌐 Web Browser]
     end
 
-    subgraph "DNS Layer"
-        Route53[Route53 Hosted Zone<br/>beto-najera.com]
+    subgraph "DNS Layer - Route53"
+        Route53[Route53 Hosted Zone<br/>beto-najera.com<br/>www.beto-najera.com]
     end
 
-    subgraph "Website Layer"
-        S3[S3 Bucket<br/>Static Website Hosting<br/>Nuxt.js App]
+    subgraph "CDN Layer - CloudFront"
+        CF[CloudFront Distribution<br/>HTTPS<br/>Global Edge Locations<br/>Caching & Compression]
+        ACMWeb[ACM Certificate us-east-1<br/>beto-najera.com<br/>www.beto-najera.com]
     end
 
-    subgraph "API Layer"
-        ACM[ACM Certificate<br/>SSL/TLS<br/>api-contact.beto-najera.com]
-        APIGateway[API Gateway REST API<br/>/contact endpoint<br/>POST + OPTIONS]
-        APIKey[API Key<br/>Authentication]
-        UsagePlan[Usage Plan<br/>100 req/day<br/>5 req/sec]
+    subgraph "Storage Layer - mx-central-1"
+        S3[S3 Bucket<br/>beto-najera.com-site<br/>Static Website Hosting<br/>Nuxt.js Build Files]
+    end
+
+    subgraph "API Layer - mx-central-1"
+        ACMAPI[ACM Certificate<br/>api-contact.beto-najera.com]
+        APIGateway[API Gateway REST API<br/>/contact endpoint<br/>POST + OPTIONS<br/>CORS Enabled]
+        APIKey[API Key<br/>x-api-key Authentication]
+        UsagePlan[Usage Plan<br/>100 req/day<br/>5 req/sec throttle]
         CustomDomain[Custom Domain<br/>api-contact.beto-najera.com]
     end
 
     subgraph "Backend Layer"
-        Lambda[Lambda Function<br/>Contact Handler<br/>Deployed by Serverless]
+        Lambda[Lambda Function<br/>Contact Handler<br/>Deployed via Serverless]
     end
 
-    Browser -->|DNS Query| Route53
-    Route53 -->|A Record ALIAS| S3
-    Route53 -->|A Record ALIAS| CustomDomain
+    Browser -->|1. DNS Query| Route53
+    Route53 -->|2. ALIAS Record| CF
+    Browser -->|3. HTTPS Request| CF
+    CF -->|4. TLS Termination| ACMWeb
+    CF -->|5. Cache Miss| S3
+    S3 -->|6. Website Files| CF
+    CF -->|7. Cached Response| Browser
     
-    Browser -->|GET beto-najera.com| S3
-    S3 -->|index.html + assets| Browser
-    
-    Browser -->|POST /contact<br/>x-api-key header| CustomDomain
-    CustomDomain --> ACM
+    Browser -->|API: POST /contact| Route53
+    Route53 -->|ALIAS Record| CustomDomain
+    CustomDomain --> ACMAPI
     CustomDomain --> APIGateway
     APIGateway --> APIKey
     APIKey --> UsagePlan
     APIGateway -->|Proxy Integration| Lambda
     Lambda -->|Response| APIGateway
-    APIGateway -->|JSON Response<br/>CORS Headers| Browser
+    APIGateway -->|JSON + CORS| Browser
 
-    style S3 fill:#ff9900
-    style APIGateway fill:#ff4f8b
-    style Lambda fill:#ff9900
-    style Route53 fill:#8c4fff
-    style ACM fill:#dd344c
+    style CF fill:#8c4fff,color:#fff
+    style S3 fill:#ff9900,color:#fff
+    style APIGateway fill:#ff4f8b,color:#fff
+    style Lambda fill:#ff9900,color:#fff
+    style Route53 fill:#8c4fff,color:#fff
+    style ACMWeb fill:#dd344c,color:#fff
+    style ACMAPI fill:#dd344c,color:#fff
 ```
 
-## 📦 Infrastructure Components
+## 📦 Infrastructure Components by Region
 
 ```mermaid
-graph LR
-    subgraph "Modules"
-        S3Module[S3 Module<br/>Static Website]
-        Route53Module[Route53 Module<br/>DNS Management]
-        ACMModule[ACM Module<br/>SSL Certificates]
-        APIModule[API Gateway Module<br/>REST API + Auth]
+graph TB
+    subgraph "Global Services"
+        CF[CloudFront Distribution<br/>Edge Locations Worldwide]
     end
 
-    subgraph "AWS Services Created"
-        S3Bucket[S3 Bucket<br/>+ Website Config<br/>+ Public Policy]
-        HostedZone[Hosted Zone<br/>+ A Records<br/>+ NS Records]
-        Certificate[SSL Certificate<br/>+ DNS Validation]
-        RestAPI[REST API<br/>+ /contact Resource<br/>+ POST/OPTIONS Methods<br/>+ Mock Integration]
-        APIKeyRes[API Key]
-        UsagePlanRes[Usage Plan<br/>+ Throttling<br/>+ Quota]
-        CustomDomainRes[Custom Domain<br/>+ Base Path Mapping]
+    subgraph "us-east-1 Region"
+        ACMCloud[ACM Certificate<br/>beto-najera.com<br/>www.beto-najera.com<br/>Required for CloudFront]
     end
 
-    S3Module --> S3Bucket
-    Route53Module --> HostedZone
-    ACMModule --> Certificate
-    APIModule --> RestAPI
-    APIModule --> APIKeyRes
-    APIModule --> UsagePlanRes
-    APIModule --> CustomDomainRes
+    subgraph "mx-central-1 Region"
+        S3[S3 Bucket<br/>beto-najera.com-site<br/>Website Config<br/>Public Read Policy]
+        
+        Route53[Route53 Hosted Zone<br/>DNS Records<br/>NS Records]
+        
+        ACMAPI[ACM Certificate<br/>api-contact.beto-najera.com]
+        
+        API[API Gateway<br/>REST API<br/>API Key<br/>Usage Plan<br/>Custom Domain]
+    end
 
-    Certificate --> CustomDomainRes
-    RestAPI --> CustomDomainRes
-    S3Bucket --> HostedZone
-    CustomDomainRes --> HostedZone
+    subgraph "Terraform Modules"
+        S3Mod[S3 Module]
+        CFMod[CloudFront Module]
+        R53Mod[Route53 Module]
+        ACMMod[ACM Module<br/>Dual Purpose]
+        APIMod[API Gateway Module]
+    end
+
+    S3Mod --> S3
+    CFMod --> CF
+    R53Mod --> Route53
+    ACMMod --> ACMCloud
+    ACMMod --> ACMAPI
+    APIMod --> API
+
+    CF -->|Origin| S3
+    CF -->|Certificate| ACMCloud
+    Route53 -->|Website ALIAS| CF
+    Route53 -->|API ALIAS| API
+    API -->|Certificate| ACMAPI
+
+    style CF fill:#8c4fff,color:#fff
+    style ACMCloud fill:#dd344c,color:#fff
+    style S3 fill:#ff9900,color:#fff
+    style API fill:#ff4f8b,color:#fff
 ```
+
+## 🎯 Key Features
+
+### Website Hosting
+- ✅ **CloudFront CDN** - Global edge locations for low latency
+- ✅ **HTTPS Everywhere** - Free SSL/TLS via ACM
+- ✅ **Custom Domain** - `beto-najera.com` and `www.beto-najera.com`
+- ✅ **SPA Support** - Client-side routing for Nuxt.js
+- ✅ **Compression** - Automatic gzip compression
+- ✅ **Caching** - 1 hour default TTL
+
+### API Gateway
+- ✅ **Custom Domain** - `api-contact.beto-najera.com`
+- ✅ **API Key Authentication** - Secure access
+- ✅ **Rate Limiting** - 5 requests/second
+- ✅ **Quota Management** - 100 requests/day
+- ✅ **CORS Enabled** - Cross-origin requests
 
 ## 🚀 Quick Start
 

@@ -8,6 +8,26 @@ output "s3_website_endpoint" {
   value       = module.s3_website.website_endpoint
 }
 
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID"
+  value       = module.cloudfront.distribution_id
+}
+
+output "cloudfront_domain_name" {
+  description = "CloudFront distribution domain name"
+  value       = module.cloudfront.distribution_domain_name
+}
+
+output "website_url" {
+  description = "Website URL (with HTTPS)"
+  value       = "https://${var.domain_name}"
+}
+
+output "website_url_www" {
+  description = "Website URL with www subdomain (with HTTPS)"
+  value       = "https://www.${var.domain_name}"
+}
+
 output "domain_name" {
   description = "The domain name configured for the website"
   value       = module.route53.website_record_fqdn

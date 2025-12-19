@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "infra/**"
+      - "function/**"
       - ".github/workflows/terraform-*.yml"
 
 env:
@@ -27,6 +28,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: function/pnpm-lock.yaml
+
+      - name: Build Lambda function
+        working-directory: function
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -61,7 +80,6 @@ jobs:
       - name: Check for State Drift
         id: drift
         run: |
-          # Detect uncommitted infrastructure changes
           if terraform plan -detailed-exitcode -no-color; then
             echo "drift=false" >> $GITHUB_OUTPUT
           else

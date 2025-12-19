@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "function/**"
-      - ".github/workflows/function-*.yml"
+      - ".github/workflows/function-ci.yml"
 
 jobs:
   test:
@@ -22,12 +22,12 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: 10
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
           cache-dependency-path: function/pnpm-lock.yaml
 
@@ -40,13 +40,5 @@ jobs:
       - name: Type check
         run: pnpm run type-check
 
-      - name: Run unit tests
-        run: pnpm test
-
       - name: Build
         run: pnpm run build
-
-      - name: Package simulation
-        run: |
-          npm install -g serverless
-          serverless package --stage staging

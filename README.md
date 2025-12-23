@@ -1,4 +1,4 @@
-# beto-mn-contact-api
+# beto-mn-platform
 
 This monorepo contains the complete backend infrastructure and Lambda function for the contact form API of the **beto-najera.com** portfolio website.
 
@@ -7,15 +7,15 @@ This monorepo contains the complete backend infrastructure and Lambda function f
 This project is organized as a monorepo with two main directories:
 
 ```
-beto-mn-contact-api/
-├── backend/          → AWS Lambda function (Node.js + TypeScript)
+beto-mn-platform/
+├── function/         → AWS Lambda function (Node.js + pnpm)
 │   ├── src/
 │   │   └── handler.ts
 │   ├── package.json
-│   ├── serverless.yml
-│   └── README.md
+│   ├── pnpm-lock.yaml
+│   └── serverless.yml
 │
-├── terraform/        → Infrastructure as Code (S3, Route53, ACM, API Gateway)
+├── infra/            → Infrastructure as Code (Terraform)
 │   ├── modules/
 │   │   ├── s3/           → Static website hosting
 │   │   ├── route53/      → DNS management
@@ -28,6 +28,15 @@ beto-mn-contact-api/
 │   ├── outputs.tf
 │   └── README.md
 │
+├── .github/
+│   ├── workflows/
+│   │   ├── terraform-plan.yml    → Plan on PRs
+│   │   ├── terraform-apply.yml   → Apply on main
+│   │   ├── function-ci.yml       → Test function on PRs
+│   │   └── function-deploy.yml   → Deploy function on main
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+│
 └── README.md         → This file
 ```
 
@@ -37,6 +46,7 @@ beto-mn-contact-api/
 - **Simplified dependency management:** Lambda function and API Gateway definitions stay in sync
 - **Easier deployment:** Deploy infrastructure first, then Lambda function
 - **Better version control:** Track infra and code changes in one place
+- **Automated CI/CD:** GitHub Actions workflows for both infrastructure and function
 
 ---
 
@@ -68,14 +78,15 @@ User Browser
 
 ## 📦 Directory Details
 
-### `/backend` - Lambda Function
+### `/function` - Lambda Function
 
 The Lambda function handles contact form submissions:
 
 - **Language:** Node.js + TypeScript
+- **Package Manager:** pnpm
 - **Framework:** Serverless Framework
 - **Purpose:** Process form data, validate inputs, send email via SES
-- **Deployment:** `serverless deploy` (after Terraform creates API structure)
+- **Deployment:** Automated via GitHub Actions on merge to `main`
 
 **Key Features:**
 - Form validation
@@ -83,9 +94,7 @@ The Lambda function handles contact form submissions:
 - Email notifications via AWS SES
 - Error handling and logging
 
-[Full Documentation →](./backend/README.md)
-
-### `/terraform` - Infrastructure as Code
+### `/infra` - Infrastructure as Code
 
 Terraform manages all AWS infrastructure in a modular architecture:
 
@@ -111,83 +120,122 @@ Terraform manages all AWS infrastructure in a modular architecture:
 - ✅ Custom domain for API with SSL
 
 **What Terraform Does NOT Create:**
-- ❌ Lambda function (deployed separately by Serverless Framework)
+- ❌ Lambda function (deployed separately by Serverless Framework via GitHub Actions)
 - ❌ SES email configuration (manual setup required)
+- ❌ CI/CD credentials (IAM user created manually)
 
-[Full Documentation →](./terraform/README.md)
+[Full Documentation →](./infra/README.md)
 
 ---
 
-## 🚀 Deployment Workflow
+## 🚀 CI/CD Pipeline
 
-### Step 1: Deploy Infrastructure (Terraform)
+This project uses **GitHub Actions** for automated deployments with a **short-lived branch strategy**:
+
+### Workflows
+
+**Terraform:**
+- `terraform-plan.yml` - Runs on PRs, comments plan output
+- `terraform-apply.yml` - Runs on merge to `main`, applies changes
+
+**Lambda Function:**
+- `function-ci.yml` - Runs on PRs, tests and lints code
+- `function-deploy.yml` - Runs on merge to `main`, deploys to AWS
+
+### Required GitHub Configuration
+
+**Secrets:**
+```
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+API_GATEWAY_KEY
+```
+
+**Variables:**
+```
+TF_VAR_AWS_REGION
+TF_VAR_DOMAIN_NAME
+API_GATEWAY_ID
+API_GATEWAY_ROOT_ID
+```
+
+**Environment:**
+- Name: `production`
+- Optional reviewers for extra protection
+
+### Development Workflow
 
 ```bash
-cd terraform
+# 1. Create feature branch
+git checkout -b fix/validation-bug
 
-# Setup AWS credentials
-source ./setup-aws-creds.sh
+# 2. Make changes
+vim function/src/handler.ts
 
-# Create S3 backend bucket (one-time)
-aws s3api create-bucket \
-  --bucket beto-mn-contact-api-terraform-state \
-  --region mx-central-1 \
-  --create-bucket-configuration LocationConstraint=mx-central-1
+# 3. Push (triggers CI checks)
+git push -u origin fix/validation-bug
 
-# Initialize and apply
+# 4. Create PR
+gh pr create --fill
+
+# 5. Review terraform plan and test results in PR
+
+# 6. Merge (triggers automatic deployment)
+gh pr merge --squash
+```
+
+---
+
+## 🔧 Local Development
+
+### Prerequisites
+
+```bash
+# Install pnpm
+npm install -g pnpm
+
+# Install Terraform
+brew install terraform
+
+# Configure AWS credentials
+aws configure
+```
+
+### Working with Infrastructure
+
+```bash
+cd infra
+
+# Initialize Terraform
 terraform init
+
+# Plan changes
 terraform plan
+
+# Apply changes
 terraform apply
 ```
 
-**This creates:**
-- S3 website bucket
-- Route53 hosted zone
-- ACM certificate
-- API Gateway structure (with MOCK integration)
-
-**Save these outputs:**
-```bash
-terraform output route53_name_servers  # Update at domain registrar
-terraform output api_key_value          # Use in frontend
-```
-
-### Step 2: Deploy Lambda Function (Serverless)
+### Working with Lambda Function
 
 ```bash
-cd backend
+cd function
 
 # Install dependencies
-npm install
+pnpm install
 
-# Deploy Lambda
-serverless deploy
+# Run tests
+pnpm test
+
+# Lint code
+pnpm lint
+
+# Type check
+pnpm type-check
+
+# Build
+pnpm build
 ```
-
-**This creates:**
-- Lambda function with contact handler
-- Updates API Gateway integration (MOCK → Lambda)
-- Sets up Lambda permissions
-
-### Step 3: Configure Domain
-
-1. Update nameservers at your domain registrar with Route53 nameservers
-2. Wait for DNS propagation (24-48 hours)
-3. Verify DNS: `dig beto-najera.com`
-
-### Step 4: Deploy Frontend
-
-```bash
-# Build Nuxt app
-npm run generate
-
-# Upload to S3
-aws s3 sync .output/public/ s3://beto-najera.com/ --delete
-```
-
----
-
-## 🔧 Development Workflow
 
 ### Making Infrastructure Changes
 
@@ -227,24 +275,33 @@ serverless offline
 ### Required Tools:
 - **AWS CLI** configured with credentials
 - **Terraform** >= 1.0
-- **Node.js** 18+ (for Lambda)
-- **Serverless Framework** (`npm install -g serverless`)
+- **Node.js** 20+
+- **pnpm** (`npm install -g pnpm`)
+- **Serverless Framework** (`pnpm add -g serverless`)
 
 ### AWS Requirements:
 - AWS account with appropriate permissions
+- IAM user for GitHub Actions (manually created)
 - Domain name registered (for Route53)
 - SES email verified (for sending notifications)
+
+### GitHub Configuration:
+- Repository secrets and variables configured
+- `production` environment created
+- (Optional) Branch protection on `main`
 
 ---
 
 ## 🔐 Security Features
 
 - ✅ **API Key Authentication:** Only authorized requests can POST to `/contact`
-- ✅ **Rate Limiting:** 100 requests/day, 5 req/sec to prevent abuse
+- ✅ **Rate Limiting:** 1000 requests/day, 5 req/sec to prevent abuse
 - ✅ **CORS:** Properly configured for browser security
 - ✅ **HTTPS:** SSL certificates via ACM
 - ✅ **Remote State:** Terraform state encrypted in S3
-- ✅ **IAM Permissions:** Least privilege for Lambda execution
+- ✅ **IAM Permissions:** Least privilege for Lambda execution and CI/CD
+- ✅ **GitHub Secrets:** AWS credentials protected in GitHub
+- ✅ **Environment Protection:** Manual approval for production deployments (optional)
 
 ---
 
@@ -256,6 +313,7 @@ serverless offline
 - **API Gateway:** Free (< 1M requests)
 - **Lambda:** Free (< 1M requests)
 - **ACM:** Free (AWS-managed certificates)
+- **CloudFront:** Free (< 50GB, 2M requests)
 
 **Expected: ~$0.50/month** for personal portfolio site
 
@@ -263,37 +321,102 @@ serverless offline
 
 ## 🛠️ Common Tasks
 
-### Get API Key
+### Get API Key and IDs
 ```bash
-cd terraform
+cd infra
 terraform output api_key_value
+terraform output api_gateway_id
+terraform output api_gateway_root_resource_id
 ```
 
 ### View Infrastructure State
 ```bash
-cd terraform
+cd infra
 terraform show
 ```
 
-### Update Lambda Code
+### Update Lambda Code (Manual)
 ```bash
-cd backend
-serverless deploy function -f contact
+cd function
+pnpm install
+serverless deploy
 ```
 
 ### View Lambda Logs
 ```bash
-cd backend
-serverless logs -f contact --tail
+cd function
+serverless logs -f sendEmail --tail
 ```
 
 ### Destroy Everything
 ```bash
 # Destroy Lambda
-cd backend
+cd function
 serverless remove
 
 # Destroy infrastructure
+cd infra
+terraform destroy
+```
+
+---
+
+## 📚 Additional Resources
+
+- [Terraform Infrastructure Guide](./infra/README.md) - Complete infrastructure documentation
+- [GitHub Actions Workflows](./.github/workflows/) - CI/CD pipeline details
+- [AWS API Gateway Module](./infra/modules/api-gateway/README.md) - API Gateway documentation
+
+---
+
+## 🐛 Troubleshooting
+
+### Infrastructure Issues
+
+**Issue:** Terraform state lock
+```bash
+# Force unlock (use with caution)
+cd infra
+terraform force-unlock <lock-id>
+```
+
+**Issue:** Certificate validation pending
+```bash
+# Check certificate status
+aws acm describe-certificate --certificate-arn <arn>
+
+# DNS records may take 20-30 minutes to propagate
+```
+
+### CI/CD Issues
+
+**Issue:** Workflow fails with "No value for required variable"
+- Check that all GitHub Variables are set correctly
+- Verify variable names match exactly
+
+**Issue:** Terraform plan shows unexpected changes
+- Someone may have modified resources manually in AWS
+- Check for state drift
+- Consider running `terraform refresh`
+
+**Issue:** Lambda deployment fails
+- Verify `API_GATEWAY_ID` and `API_GATEWAY_ROOT_ID` variables are set
+- Check IAM user permissions
+- Review Serverless Framework logs
+
+---
+
+## 👤 Author
+
+**Alberto Najera**
+- GitHub: [@beto-mn](https://github.com/beto-mn)
+- Website: [beto-najera.com](https://beto-najera.com)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 cd ../terraform
 terraform destroy
 ```

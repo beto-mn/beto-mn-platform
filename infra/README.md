@@ -1,4 +1,4 @@
-# Terraform Infrastructure - Beto Najera Portfolio
+# Terraform Infrastructure - Beto Miron Najera Portfolio
 
 This directory contains the complete Infrastructure as Code (IaC) for a personal portfolio website with contact form API, hosted on AWS using CloudFront CDN.
 

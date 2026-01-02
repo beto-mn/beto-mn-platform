@@ -4,7 +4,6 @@ terraform {
     key                    = "terraform.tfstate"
     region                 = "mx-central-1"
     encrypt                = true
-    use_lockfile           = true
     skip_region_validation = true
   }
 }

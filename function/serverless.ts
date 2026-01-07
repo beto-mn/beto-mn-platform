@@ -19,7 +19,7 @@ const serverlessConfig: AWS = {
     },
     apiGateway: {
       restApiId: '0iz3178srb',
-      restApiRootResourceId: '0i1unpz121',
+      restApiRootResourceId: 'xupquu',
     },
   },
 

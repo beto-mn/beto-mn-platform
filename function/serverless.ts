@@ -9,6 +9,10 @@ const serverlessConfig: AWS = {
   provider: {
     name: 'aws',
     runtime: 'nodejs24.x',
+    region: 'us-east-1',
+    deploymentBucket: {
+      name: 'beto-mn-serverless-deployments',
+    },
     environment: {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
       NODE_OPTIONS: '--enable-source-maps',

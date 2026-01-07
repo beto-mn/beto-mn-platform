@@ -9,7 +9,7 @@ const serverlessConfig: AWS = {
   provider: {
     name: 'aws',
     runtime: 'nodejs24.x',
-    region: 'us-east-1',
+    region: 'mx-central-1',
     deploymentBucket: {
       name: 'beto-mn-serverless-deployments',
     },
@@ -19,7 +19,7 @@ const serverlessConfig: AWS = {
     },
     apiGateway: {
       restApiId: '0iz3178srb',
-      restApiRootResourceId: 'xupquu',
+      restApiRootResourceId: '0i1unpz121',
     },
   },
 

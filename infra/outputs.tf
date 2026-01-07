@@ -53,6 +53,11 @@ output "api_id" {
   value       = module.api_gateway.api_id
 }
 
+output "api_root_resource_id" {
+  description = "API Gateway root resource ID (use in Serverless)"
+  value       = module.api_gateway.api_root_resource_id
+}
+
 output "api_contact_resource_id" {
   description = "/contact resource ID (use in Serverless)"
   value       = module.api_gateway.contact_resource_id

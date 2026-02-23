@@ -40,6 +40,27 @@ module "acm_api" {
   hosted_zone_id = module.route53.hosted_zone_id
 }
 
+# SES Module - Email Templates
+module "ses" {
+  source = "./modules/ses"
+  providers = {
+    aws = aws.us_east_1
+  }
+
+  project_name = var.project_name
+}
+
+# Lambda Module - Contact Form Handler
+module "lambda" {
+  source = "./modules/lambda"
+
+  project_name          = var.project_name
+  email                 = var.email
+  ses_region            = var.ses_region
+  notification_template = module.ses.notification_template_name
+  confirmation_template = module.ses.confirmation_template_name
+}
+
 # API Gateway Module - Contact API
 module "api_gateway" {
   source = "./modules/api-gateway"
@@ -53,15 +74,15 @@ module "api_gateway" {
 module "route53" {
   source = "./modules/route53"
 
-  domain_name                = var.domain_name
-  use_cloudfront             = true
-  cloudfront_domain_name     = module.cloudfront.distribution_domain_name
-  cloudfront_hosted_zone_id  = module.cloudfront.distribution_hosted_zone_id
-  s3_website_domain          = module.s3_website.website_domain
-  s3_hosted_zone_id          = module.s3_website.website_hosted_zone_id
-  create_www_subdomain       = true
-  create_api_record          = true
-  api_subdomain              = "${var.api_subdomain}.${var.domain_name}"
-  api_gateway_domain         = module.api_gateway.custom_domain_regional_domain_name
-  api_gateway_zone_id        = module.api_gateway.custom_domain_regional_zone_id
+  domain_name               = var.domain_name
+  use_cloudfront            = true
+  cloudfront_domain_name    = module.cloudfront.distribution_domain_name
+  cloudfront_hosted_zone_id = module.cloudfront.distribution_hosted_zone_id
+  s3_website_domain         = module.s3_website.website_domain
+  s3_hosted_zone_id         = module.s3_website.website_hosted_zone_id
+  create_www_subdomain      = true
+  create_api_record         = true
+  api_subdomain             = "${var.api_subdomain}.${var.domain_name}"
+  api_gateway_domain        = module.api_gateway.custom_domain_regional_domain_name
+  api_gateway_zone_id       = module.api_gateway.custom_domain_regional_zone_id
 }

@@ -25,3 +25,14 @@ variable "api_subdomain" {
   type        = string
   default     = "api-contact"
 }
+
+variable "email" {
+  description = "SES verified email address (used as sender and notification recipient)"
+  type        = string
+}
+
+variable "ses_region" {
+  description = "AWS region where SES is configured"
+  type        = string
+  default     = "us-east-1"
+}

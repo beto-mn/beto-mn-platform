@@ -25,3 +25,6 @@ terraform.rc
 
 # AWS credentials setup script may contain sensitive info if modified
 # setup-aws-creds.sh
+
+# Lambda build artifacts
+**/*.zip

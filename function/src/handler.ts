@@ -50,12 +50,14 @@ export const main = async (
     await Promise.all([
       ses.send(new SendTemplatedEmailCommand({
         Source: fromEmail,
+        ReplyToAddresses: [ownerEmail],
         Destination: { ToAddresses: [ownerEmail] },
         Template: notificationTemplate,
         TemplateData: templateData,
       })),
       ses.send(new SendTemplatedEmailCommand({
         Source: fromEmail,
+        ReplyToAddresses: [ownerEmail],
         Destination: { ToAddresses: [email] },
         Template: confirmationTemplate,
         TemplateData: templateData,

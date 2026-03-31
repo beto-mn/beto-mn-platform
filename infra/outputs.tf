@@ -48,19 +48,9 @@ output "api_custom_domain" {
   value       = module.api_gateway.custom_domain_name
 }
 
-output "api_id" {
-  description = "API Gateway ID (use in Serverless)"
-  value       = module.api_gateway.api_id
-}
-
-output "api_root_resource_id" {
-  description = "API Gateway root resource ID (use in Serverless)"
-  value       = module.api_gateway.api_root_resource_id
-}
-
-output "api_contact_resource_id" {
-  description = "/contact resource ID (use in Serverless)"
-  value       = module.api_gateway.contact_resource_id
+output "lambda_function_name" {
+  description = "Lambda function name"
+  value       = module.lambda.function_name
 }
 
 output "api_key_value" {

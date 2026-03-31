@@ -47,7 +47,9 @@ module "ses" {
     aws = aws.us_east_1
   }
 
-  project_name = var.project_name
+  project_name   = var.project_name
+  domain_name    = var.domain_name
+  hosted_zone_id = module.route53.hosted_zone_id
 }
 
 # Lambda Module - Contact Form Handler

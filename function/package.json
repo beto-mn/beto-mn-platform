@@ -4,7 +4,7 @@
   "description": "AWS Lambda contact form handler",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && cp -r node_modules dist/",
+    "build": "tsc",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,json,md}\"",

@@ -40,11 +40,25 @@ module "acm_api" {
   hosted_zone_id = module.route53.hosted_zone_id
 }
 
+# SES Module - Email Templates
+module "ses" {
+  source = "./modules/ses"
+  providers = {
+    aws = aws.us_east_1
+  }
+
+  project_name = var.project_name
+}
+
 # Lambda Module - Contact Form Handler
 module "lambda" {
   source = "./modules/lambda"
 
-  project_name = var.project_name
+  project_name          = var.project_name
+  email                 = var.email
+  ses_region            = var.ses_region
+  notification_template = module.ses.notification_template_name
+  confirmation_template = module.ses.confirmation_template_name
 }
 
 # API Gateway Module - Contact API

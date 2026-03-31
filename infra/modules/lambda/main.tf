@@ -51,7 +51,12 @@ resource "aws_lambda_function" "contact" {
 
   environment {
     variables = {
-      NODE_OPTIONS = "--enable-source-maps"
+      NODE_OPTIONS            = "--enable-source-maps"
+      FROM_EMAIL              = var.email
+      OWNER_EMAIL             = var.email
+      SES_REGION              = var.ses_region
+      NOTIFICATION_TEMPLATE   = var.notification_template
+      CONFIRMATION_TEMPLATE   = var.confirmation_template
     }
   }
 

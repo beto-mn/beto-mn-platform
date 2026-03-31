@@ -27,4 +27,4 @@ terraform.rc
 # setup-aws-creds.sh
 
 # Lambda build artifacts
-modules/lambda/lambda.zip
+**/*.zip

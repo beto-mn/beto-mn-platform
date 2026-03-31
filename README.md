@@ -1,146 +1,89 @@
 # beto-mn-platform
 
-This monorepo contains the complete backend infrastructure and Lambda function for the contact form API of the **beto-najera.com** portfolio website.
+This monorepo contains the complete infrastructure and Lambda function for the contact form API of the **beto-najera.com** portfolio website. All AWS resources are managed by Terraform.
 
-## 🏗️ Monorepo Structure
-
-This project is organized as a monorepo with two main directories:
+## 🏗️ Structure
 
 ```
 beto-mn-platform/
-├── function/         → AWS Lambda function (Node.js + pnpm)
-│   ├── src/
-│   │   └── handler.ts
-│   ├── package.json
-│   ├── pnpm-lock.yaml
-│   └── serverless.yml
+├── function/               → AWS Lambda function (TypeScript)
+│   └── src/
+│       └── handler.ts
 │
-├── infra/            → Infrastructure as Code (Terraform)
-│   ├── modules/
-│   │   ├── s3/           → Static website hosting
-│   │   ├── route53/      → DNS management
-│   │   ├── acm/          → SSL certificates
-│   │   └── api-gateway/  → REST API structure
-│   ├── backend.tf
-│   ├── provider.tf
-│   ├── variables.tf
-│   ├── modules.tf
-│   ├── outputs.tf
-│   └── README.md
+├── infra/                  → Infrastructure as Code (Terraform)
+│   └── modules/
+│       ├── lambda/         → Lambda function + IAM role
+│       ├── ses/            → SES email templates (notification + confirmation)
+│       ├── api-gateway/    → REST API, stage, custom domain, API Key
+│       ├── s3/             → Static website hosting
+│       ├── cloudfront/     → CDN distribution
+│       ├── route53/        → DNS management
+│       └── acm/            → SSL certificates
 │
-├── .github/
-│   ├── workflows/
-│   │   ├── terraform-plan.yml    → Plan on PRs
-│   │   ├── terraform-apply.yml   → Apply on main
-│   │   ├── function-ci.yml       → Test function on PRs
-│   │   └── function-deploy.yml   → Deploy function on main
-│   ├── CODEOWNERS
-│   └── pull_request_template.md
-│
-└── README.md         → This file
+└── .github/workflows/
+    ├── terraform-plan.yml  → CI: lint, type-check, terraform plan (PRs)
+    └── terraform-apply.yml → CD: build + terraform apply (merge to master)
 ```
-
-### Why a Monorepo?
-
-- **Single source of truth:** Infrastructure and application code live together
-- **Simplified dependency management:** Lambda function and API Gateway definitions stay in sync
-- **Easier deployment:** Deploy infrastructure first, then Lambda function
-- **Better version control:** Track infra and code changes in one place
-- **Automated CI/CD:** GitHub Actions workflows for both infrastructure and function
 
 ---
 
-## 🚀 Architecture Overview
+## 🚀 Architecture
 
 ```
 User Browser
     ↓
-    ├─→ beto-najera.com (S3 Static Website)
-    │   └─→ Route53 DNS + Website Hosting
+    ├─→ beto-najera.com
+    │   CloudFront → S3 (Nuxt.js static site)
     │
-    └─→ api-contact.beto-najera.com (API Gateway)
-        ├─→ ACM SSL Certificate
-        ├─→ API Key Authentication
-        ├─→ CORS + Rate Limiting
-        └─→ AWS Lambda (Contact Handler)
-            └─→ AWS SES (Email Notification)
+    └─→ api-contact.beto-najera.com
+        API Gateway (stage: api) → Lambda → SES
 ```
 
-### Components:
-
-1. **Static Website (Nuxt.js)** - Hosted on S3, served via custom domain
-2. **DNS Management** - Route53 handles domain routing
-3. **SSL Certificates** - ACM provides HTTPS for API subdomain
-4. **REST API** - API Gateway with `/contact` endpoint, API Key auth, and CORS
-5. **Lambda Function** - Node.js handler for form processing and email sending
+**Everything is managed by Terraform**, including the Lambda function. On every push to `master`, Terraform compiles the TypeScript, packages it, and deploys the function.
 
 ---
 
-## 📦 Directory Details
+## 🔧 Local Development
 
-### `/function` - Lambda Function
+### Prerequisites
 
-The Lambda function handles contact form submissions:
+- AWS CLI configured (`aws configure`)
+- Terraform >= 1.10
+- Node.js 22
+- pnpm (`npm install -g pnpm`)
 
-- **Language:** Node.js + TypeScript
-- **Package Manager:** pnpm
-- **Framework:** Serverless Framework
-- **Purpose:** Process form data, validate inputs, send email via SES
-- **Deployment:** Automated via GitHub Actions on merge to `main`
+### Lambda Function
 
-**Key Features:**
-- Form validation
-- Rate limiting (via API Gateway)
-- Email notifications via AWS SES
-- Error handling and logging
+```bash
+cd function
 
-### `/infra` - Infrastructure as Code
+pnpm install       # install dependencies
+pnpm lint          # ESLint
+pnpm type-check    # TypeScript check
+pnpm run build     # compile TypeScript → dist/
+```
 
-Terraform manages all AWS infrastructure in a modular architecture:
+### Infrastructure
 
-**Modules:**
-- **`s3/`** - Static website hosting for Nuxt app
-- **`route53/`** - DNS hosted zone and A records
-- **`acm/`** - SSL certificates with DNS validation
-- **`api-gateway/`** - REST API structure, API Key, usage plans, custom domain
+```bash
+cd function && pnpm install && pnpm run build   # build first (required)
 
-**Configuration Files:**
-- `backend.tf` - S3 remote state storage
-- `provider.tf` - AWS provider with default tags
-- `variables.tf` - Global variables (region, domain, project name)
-- `modules.tf` - Module composition and wiring
-- `outputs.tf` - Exported values (nameservers, API key, endpoints)
-
-**What Terraform Creates:**
-- ✅ S3 bucket for static website hosting
-- ✅ Route53 hosted zone with DNS records
-- ✅ ACM certificate for API subdomain
-- ✅ API Gateway REST API with `/contact` endpoint
-- ✅ API Key and Usage Plan (100 req/day, 5 req/sec)
-- ✅ Custom domain for API with SSL
-
-**What Terraform Does NOT Create:**
-- ❌ Lambda function (deployed separately by Serverless Framework via GitHub Actions)
-- ❌ SES email configuration (manual setup required)
-- ❌ CI/CD credentials (IAM user created manually)
-
-[Full Documentation →](./infra/README.md)
+cd infra
+terraform init
+terraform plan
+terraform apply
+```
 
 ---
 
 ## 🚀 CI/CD Pipeline
 
-This project uses **GitHub Actions** for automated deployments with a **short-lived branch strategy**:
+Both workflows trigger on changes to `function/**` or `infra/**`.
 
-### Workflows
-
-**Terraform:**
-- `terraform-plan.yml` - Runs on PRs, comments plan output
-- `terraform-apply.yml` - Runs on merge to `main`, applies changes
-
-**Lambda Function:**
-- `function-ci.yml` - Runs on PRs, tests and lints code
-- `function-deploy.yml` - Runs on merge to `main`, deploys to AWS
+| Workflow | Trigger | Steps |
+|---|---|---|
+| `terraform-plan.yml` | PR to master | lint → type-check → build → terraform plan → comment on PR |
+| `terraform-apply.yml` | Merge to master | build → terraform apply |
 
 ### Required GitHub Configuration
 
@@ -153,314 +96,95 @@ API_GATEWAY_KEY
 
 **Variables:**
 ```
-TF_VAR_AWS_REGION
-TF_VAR_DOMAIN_NAME
-API_GATEWAY_ID
-API_GATEWAY_ROOT_ID
-```
-
-**Environment:**
-- Name: `production`
-- Optional reviewers for extra protection
-
-### Development Workflow
-
-```bash
-# 1. Create feature branch
-git checkout -b fix/validation-bug
-
-# 2. Make changes
-vim function/src/handler.ts
-
-# 3. Push (triggers CI checks)
-git push -u origin fix/validation-bug
-
-# 4. Create PR
-gh pr create --fill
-
-# 5. Review terraform plan and test results in PR
-
-# 6. Merge (triggers automatic deployment)
-gh pr merge --squash
+TF_VAR_AWS_REGION     = mx-central-1
+TF_VAR_DOMAIN_NAME    = beto-najera.com
+TF_VAR_EMAIL          = ing.betonajera@gmail.com
 ```
 
 ---
 
-## 🔧 Local Development
+## 📦 What Terraform Manages
 
-### Prerequisites
+- ✅ S3 bucket for static website
+- ✅ CloudFront distribution
+- ✅ Route53 hosted zone and DNS records
+- ✅ ACM certificates (CloudFront + API)
+- ✅ API Gateway REST API with `/contact` endpoint, API Key, usage plan, custom domain
+- ✅ Lambda function (IAM role, SES permissions, deployment package)
+- ✅ SES email templates (`notification` → owner, `confirmation` → sender)
 
-```bash
-# Install pnpm
-npm install -g pnpm
-
-# Install Terraform
-brew install terraform
-
-# Configure AWS credentials
-aws configure
-```
-
-### Working with Infrastructure
-
-```bash
-cd infra
-
-# Initialize Terraform
-terraform init
-
-# Plan changes
-terraform plan
-
-# Apply changes
-terraform apply
-```
-
-### Working with Lambda Function
-
-```bash
-cd function
-
-# Install dependencies
-pnpm install
-
-# Run tests
-pnpm test
-
-# Lint code
-pnpm lint
-
-# Type check
-pnpm type-check
-
-# Build
-pnpm build
-```
-
-### Making Infrastructure Changes
-
-```bash
-cd terraform
-
-# Make changes to .tf files
-terraform plan    # Review changes
-terraform apply   # Apply changes
-```
-
-### Updating Lambda Function
-
-```bash
-cd backend
-
-# Update handler code
-# ...
-
-# Redeploy
-serverless deploy
-```
-
-### Testing API Locally
-
-```bash
-cd backend
-
-# Run serverless offline
-serverless offline
-```
+**Manual setup required:**
+- SES email verification (`ing.betonajera@gmail.com` must be verified in us-east-1)
+- IAM user for GitHub Actions (`beto-mn-github`)
 
 ---
 
-## 📋 Prerequisites
+## 🔐 Security
 
-### Required Tools:
-- **AWS CLI** configured with credentials
-- **Terraform** >= 1.0
-- **Node.js** 20+
-- **pnpm** (`npm install -g pnpm`)
-- **Serverless Framework** (`pnpm add -g serverless`)
-
-### AWS Requirements:
-- AWS account with appropriate permissions
-- IAM user for GitHub Actions (manually created)
-- Domain name registered (for Route53)
-- SES email verified (for sending notifications)
-
-### GitHub Configuration:
-- Repository secrets and variables configured
-- `production` environment created
-- (Optional) Branch protection on `main`
+- API Key authentication on POST `/contact`
+- Rate limiting: 1000 req/day, 5 req/sec burst
+- HTTPS via ACM certificates
+- Terraform state encrypted in S3
+- IAM least privilege for Lambda and CI/CD user
 
 ---
 
-## 🔐 Security Features
+## 💰 Cost Estimate
 
-- ✅ **API Key Authentication:** Only authorized requests can POST to `/contact`
-- ✅ **Rate Limiting:** 1000 requests/day, 5 req/sec to prevent abuse
-- ✅ **CORS:** Properly configured for browser security
-- ✅ **HTTPS:** SSL certificates via ACM
-- ✅ **Remote State:** Terraform state encrypted in S3
-- ✅ **IAM Permissions:** Least privilege for Lambda execution and CI/CD
-- ✅ **GitHub Secrets:** AWS credentials protected in GitHub
-- ✅ **Environment Protection:** Manual approval for production deployments (optional)
-
----
-
-## 💰 Cost Estimation
-
-### AWS Free Tier (First 12 months):
-- **Route53:** $0.50/month (hosted zone)
-- **S3:** Free (< 5GB, 20k requests)
-- **API Gateway:** Free (< 1M requests)
-- **Lambda:** Free (< 1M requests)
-- **ACM:** Free (AWS-managed certificates)
-- **CloudFront:** Free (< 50GB, 2M requests)
-
-**Expected: ~$0.50/month** for personal portfolio site
+~**$0.50/month** (Route53 hosted zone). All other services stay within AWS Free Tier for a personal portfolio site.
 
 ---
 
 ## 🛠️ Common Tasks
 
-### Get API Key and IDs
 ```bash
-cd infra
-terraform output api_key_value
-terraform output api_gateway_id
-terraform output api_gateway_root_resource_id
+# Get API key value
+cd infra && terraform output api_key_value
+
+# View all outputs
+cd infra && terraform output
+
+# View Lambda logs
+aws logs tail /aws/lambda/beto-mn-site-contact --follow --region mx-central-1
+
+# Destroy everything
+cd infra && terraform destroy
 ```
-
-### View Infrastructure State
-```bash
-cd infra
-terraform show
-```
-
-### Update Lambda Code (Manual)
-```bash
-cd function
-pnpm install
-serverless deploy
-```
-
-### View Lambda Logs
-```bash
-cd function
-serverless logs -f sendEmail --tail
-```
-
-### Destroy Everything
-```bash
-# Destroy Lambda
-cd function
-serverless remove
-
-# Destroy infrastructure
-cd infra
-terraform destroy
-```
-
----
-
-## 📚 Additional Resources
-
-- [Terraform Infrastructure Guide](./infra/README.md) - Complete infrastructure documentation
-- [GitHub Actions Workflows](./.github/workflows/) - CI/CD pipeline details
-- [AWS API Gateway Module](./infra/modules/api-gateway/README.md) - API Gateway documentation
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Infrastructure Issues
-
-**Issue:** Terraform state lock
+**Terraform state lock**
 ```bash
-# Force unlock (use with caution)
 cd infra
-terraform force-unlock <lock-id>
+terraform force-unlock -force <lock-id>
 ```
 
-**Issue:** Certificate validation pending
+**Certificate validation pending**
 ```bash
-# Check certificate status
-aws acm describe-certificate --certificate-arn <arn>
-
-# DNS records may take 20-30 minutes to propagate
+aws acm describe-certificate --certificate-arn <arn> --region mx-central-1
+# DNS validation can take 20-30 minutes
 ```
 
-### CI/CD Issues
+**API Gateway resource already exists (409 on apply)**
+```bash
+# Get /contact resource ID
+aws apigateway get-resources --rest-api-id <api-id> --region mx-central-1 \
+  --query "items[?path=='/contact'].id" --output text
 
-**Issue:** Workflow fails with "No value for required variable"
-- Check that all GitHub Variables are set correctly
-- Verify variable names match exactly
-
-**Issue:** Terraform plan shows unexpected changes
-- Someone may have modified resources manually in AWS
-- Check for state drift
-- Consider running `terraform refresh`
-
-**Issue:** Lambda deployment fails
-- Verify `API_GATEWAY_ID` and `API_GATEWAY_ROOT_ID` variables are set
-- Check IAM user permissions
-- Review Serverless Framework logs
+# Import into Terraform state
+terraform import module.api_gateway.aws_api_gateway_method.contact_post <api-id>/<resource-id>/POST
+terraform import module.api_gateway.aws_api_gateway_method.contact_options <api-id>/<resource-id>/OPTIONS
+```
 
 ---
 
 ## 👤 Author
 
-**Alberto Najera**
-- GitHub: [@beto-mn](https://github.com/beto-mn)
-- Website: [beto-najera.com](https://beto-najera.com)
-
----
+**Roberto Miron Nájera**
+Portfolio: [beto-najera.com](https://beto-najera.com) · Email: ing.betonajera@gmail.com
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-cd ../terraform
-terraform destroy
-```
-
----
-
-## 📚 Documentation
-
-- [Terraform Infrastructure Guide](./terraform/README.md) - Complete infrastructure documentation
-- [Lambda Function Guide](./backend/README.md) - Backend development guide
-- [S3 Module](./terraform/modules/s3/README.md) - Static website hosting
-- [Route53 Module](./terraform/modules/route53/README.md) - DNS management
-- [ACM Module](./terraform/modules/acm/README.md) - SSL certificates
-- [API Gateway Module](./terraform/modules/api-gateway/README.md) - REST API configuration
-
----
-
-## 🐛 Troubleshooting
-
-### Infrastructure Issues
-See [Terraform README Troubleshooting](./terraform/README.md#-troubleshooting)
-
-### Lambda Issues
-- Check CloudWatch logs in AWS Console
-- Use `serverless logs -f contact --tail`
-- Verify SES email is verified
-
-### API Issues
-- Verify API Key is correct
-- Check CORS headers in browser console
-- Ensure Usage Plan limits not exceeded
-
----
-
-## 📝 License
-
-[MIT](LICENSE) - Open source and free to use
-
----
-
-## 👤 Author
-
-**Roberto Miron Nájera**  
-Backend Developer — TypeScript, Node.js, AWS, Terraform
-
-Portfolio: [beto-najera.com](https://beto-najera.com)  
-Email: ing.betonajera@gmail.com
+[MIT](LICENSE)

@@ -95,7 +95,7 @@ resource "aws_lambda_permission" "api_gateway" {
   action        = "lambda:InvokeFunction"
   function_name = var.lambda_function_arn
   principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.contact_api.execution_arn}/*/*"
+  source_arn    = "${aws_api_gateway_rest_api.contact_api.execution_arn}/*/POST/contact"
 }
 
 # Deployment

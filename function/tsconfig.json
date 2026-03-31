@@ -37,9 +37,6 @@
     "removeComments": true,
     "resolveJsonModule": true
   },
-  "include": ["serverless.ts", "infra/**/*", "test/**/*", "src/**/*"],
-  "exclude": ["node_modules", ".serverless", "./dist"],
-  "ts-node": {
-    "require": ["tsconfig-paths/register"]
-  }
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "./dist"]
 }

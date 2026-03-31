@@ -5,9 +5,10 @@ on:
     branches: [master]
     paths:
       - "infra/**"
+      - "function/**"
 
 env:
-  TF_VERSION: "1.6.0"
+  TF_VERSION: "1.10.0"
   AWS_REGION: ${{ vars.TF_VAR_AWS_REGION }}
 
 jobs:
@@ -22,6 +23,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: function/pnpm-lock.yaml
+
+      - name: Build Lambda function
+        working-directory: function
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -50,4 +69,3 @@ jobs:
         if: failure()
         run: |
           echo "::error::Terraform apply failed! Check the logs."
-          # You can add Slack/Discord notification here

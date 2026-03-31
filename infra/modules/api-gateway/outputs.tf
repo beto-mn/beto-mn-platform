@@ -1,18 +1,6 @@
-# API Gateway Module - Outputs
-
 output "api_id" {
   description = "The ID of the REST API"
   value       = aws_api_gateway_rest_api.contact_api.id
-}
-
-output "api_root_resource_id" {
-  description = "The root resource ID of the REST API"
-  value       = aws_api_gateway_rest_api.contact_api.root_resource_id
-}
-
-output "api_arn" {
-  description = "The ARN of the REST API"
-  value       = aws_api_gateway_rest_api.contact_api.arn
 }
 
 output "api_endpoint" {
@@ -38,16 +26,6 @@ output "custom_domain_regional_domain_name" {
 output "custom_domain_regional_zone_id" {
   description = "The regional zone ID for Route53"
   value       = aws_api_gateway_domain_name.contact_api.regional_zone_id
-}
-
-output "contact_resource_id" {
-  description = "The ID of the /contact resource (for Serverless integration)"
-  value       = aws_api_gateway_resource.contact.id
-}
-
-output "api_key_id" {
-  description = "The API Key ID"
-  value       = aws_api_gateway_api_key.contact_api.id
 }
 
 output "api_key_value" {

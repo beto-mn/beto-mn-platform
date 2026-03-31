@@ -65,9 +65,11 @@ module "lambda" {
 module "api_gateway" {
   source = "./modules/api-gateway"
 
-  project_name    = var.project_name
-  api_subdomain   = "${var.api_subdomain}.${var.domain_name}"
-  certificate_arn = module.acm_api.certificate_arn
+  project_name        = var.project_name
+  api_subdomain       = "${var.api_subdomain}.${var.domain_name}"
+  certificate_arn     = module.acm_api.certificate_arn
+  lambda_invoke_arn   = module.lambda.invoke_arn
+  lambda_function_arn = module.lambda.function_arn
 }
 
 # Route53 Module - DNS Configuration

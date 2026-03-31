@@ -34,7 +34,7 @@ resource "aws_iam_role_policy" "lambda_ses" {
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = ["ses:SendEmail", "ses:SendRawEmail"]
+      Action   = ["ses:SendEmail", "ses:SendRawEmail", "ses:SendTemplatedEmail"]
       Resource = "*"
     }]
   })

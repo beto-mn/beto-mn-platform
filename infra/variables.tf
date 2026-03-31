@@ -26,8 +26,13 @@ variable "api_subdomain" {
   default     = "api-contact"
 }
 
-variable "email" {
-  description = "SES verified email address (used as sender and notification recipient)"
+variable "from_email" {
+  description = "SES verified email address to send from (e.g. contact@beto-najera.com)"
+  type        = string
+}
+
+variable "owner_email" {
+  description = "Owner email to receive contact notifications (e.g. ing.betonajera@gmail.com)"
   type        = string
 }
 

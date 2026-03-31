@@ -57,7 +57,8 @@ module "lambda" {
   source = "./modules/lambda"
 
   project_name          = var.project_name
-  email                 = var.email
+  from_email            = var.from_email
+  owner_email           = var.owner_email
   ses_region            = var.ses_region
   notification_template = module.ses.notification_template_name
   confirmation_template = module.ses.confirmation_template_name

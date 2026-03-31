@@ -63,7 +63,8 @@ jobs:
         env:
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
           TF_VAR_domain_name: ${{ vars.TF_VAR_DOMAIN_NAME }}
-          TF_VAR_email: ${{ vars.TF_VAR_EMAIL }}
+          TF_VAR_from_email: ${{ vars.TF_VAR_FROM_EMAIL }}
+          TF_VAR_owner_email: ${{ vars.TF_VAR_OWNER_EMAIL }}
 
       - name: Notify on Failure
         if: failure()

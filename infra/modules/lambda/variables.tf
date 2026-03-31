@@ -3,8 +3,13 @@ variable "project_name" {
   type        = string
 }
 
-variable "email" {
-  description = "SES verified email address (used as sender and notification recipient)"
+variable "from_email" {
+  description = "SES verified email address to send from"
+  type        = string
+}
+
+variable "owner_email" {
+  description = "Owner email to receive contact notifications"
   type        = string
 }
 
